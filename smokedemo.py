@@ -25,7 +25,9 @@ class SmokeParticle:
     def draw(self):
         screen.blit(self.img, self.img.get_rect(center=(self.x, self.y)))
 
+
 smoke_particle = SmokeParticle()
+
 
 def main_game():
     while True:
