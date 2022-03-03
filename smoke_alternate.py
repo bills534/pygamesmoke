@@ -1,3 +1,4 @@
+from numpy import blackman
 import pygame
 import random
 import math
@@ -10,7 +11,12 @@ spawn_y = height // 2
 rotation_speed = 5
 starting_velocity = 2
 
+pygame.init()
 screen = pygame.display.set_mode((width,height))
+WHITE = (255,255,255)
+BLACK = (0,0,0)
+FONT = pygame.font.SysFont('calibri', 16)
+menu = FONT.render('Up/Down: Increase/Decrease Smoke Velocity, Left/Right: Adjust Rotation Speed', True, WHITE, BLACK)
 
 clock = pygame.time.Clock()
 FPS = 60
@@ -24,13 +30,13 @@ def scale(img: pygame.Surface, factor):
 IMAGE = pygame.image.load('cloudsmall.png').convert_alpha()
 
 class Particle:
-    def __init__(self, x=spawn_x, y=spawn_y, angle=0, velocity=2):
+    def __init__(self, x=spawn_x, y=spawn_y, angle=0, velocity=2, alpha_decay_rate=3):
         self.x = x
         self.y = y
         self.scale_k = 0.1
         self.img = scale(IMAGE, self.scale_k)
         self.alpha = 255
-        self.alpha_decay_rate = 3
+        self.alpha_decay_rate = alpha_decay_rate
         self.alive = True
 
         self.angle = angle
@@ -76,8 +82,6 @@ class Smoke:
         self.angle = 0
         self.rotation_speed = rotation_speed
         self.starting_v = starting_v
-        self.dx = 0
-        self.dy = 0
 
     def update(self):
         # removing dead particles from the particle list
@@ -88,9 +92,41 @@ class Smoke:
             self.frames = 0
             self.particles.append(Particle(self.x, self.y, self.angle, self.starting_v))
             self.angle += self.rotation_speed
-            # this is just for me to display the x and y velocity for fun
-            self.dx = round(math.cos(math.radians(self.angle)) * self.starting_v, 2)
-            self.dy = round(math.sin(math.radians(self.angle)) * self.starting_v, 2)
+
+
+        for i in self.particles:
+            i.update()
+            
+
+    def draw(self):
+        for i in self.particles:
+            i.draw()
+
+
+class Ring:
+    def __init__(self, x = spawn_x, y = spawn_y, rotation_speed=rotation_speed, starting_v=starting_velocity):
+        self.x = x
+        self.y = y
+        self.particles = []
+        self.frames = 0
+        self.particle_count = 0
+        self.angle = 0
+        self.rotation_speed = rotation_speed
+        self.starting_v = starting_v
+
+    def update(self):
+        # removing dead particles from the particle list
+        self.particles = [i for i in self.particles if i.alive]
+        self.partical_count = len(self.particles)
+        self.frames += 1
+        # only render particle every other frame
+        if self.frames % 60 == 0:
+            self.frames = 0
+
+            for x in range(360 // int(self.rotation_speed)):
+                self.particles.append(Particle(self.x, self.y, self.angle, self.starting_v, 7))
+                self.angle += self.rotation_speed
+
 
         for i in self.particles:
             i.update()
@@ -109,11 +145,13 @@ def main_game():
 
     while True:
 
+
+
         # indirectly updating the partical starting velocity for smoother looking transitions
         if set_vel > smoke.starting_v:
-            smoke.starting_v += 0.01
+            smoke.starting_v += 0.02
         if set_vel < smoke.starting_v:
-            smoke.starting_v -= 0.01
+            smoke.starting_v -= 0.02
         
         events = pygame.event.get()
         for e in events:
@@ -123,21 +161,32 @@ def main_game():
                 if e.key == pygame.K_ESCAPE:
                     quit()
                 if e.key == pygame.K_LEFT:
-                    smoke.rotation_speed += 0.33
+                    smoke.rotation_speed += 0.5
                 if e.key == pygame.K_RIGHT:
-                    smoke.rotation_speed -= 0.33
+                    smoke.rotation_speed -= 0.5
                 # velocity setting is indirectly updated for smoothness
                 if e.key == pygame.K_UP:
                     set_vel += 0.5
                 if e.key == pygame.K_DOWN:
                     set_vel -= 0.5
+                if e.key == pygame.K_1:
+                    if smoke:
+                        del smoke
+                    smoke = Smoke()
+                if e.key == pygame.K_2:
+                    if smoke:
+                        del smoke
+                    smoke = Ring()
         
         screen.fill((0,0,0))
+        menu_yoffset = menu.get_height()
+        menu_xoffset = (width // 2 ) - (menu.get_width() // 2)
+        screen.blit(menu, (menu_xoffset,menu_yoffset))
         smoke.update()
         smoke.draw()
         pygame.display.update()
         clock.tick(FPS)
-        pygame.display.set_caption(f'FPS = {round(clock.get_fps())} | Particle Count = {smoke.partical_count} | X/Y: {smoke.dx}/{smoke.dy}')
+        pygame.display.set_caption(f'FPS = {round(clock.get_fps())} | Particle Count = {smoke.partical_count}')
 
 
 main_game()
