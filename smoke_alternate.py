@@ -1,6 +1,5 @@
-from numpy import blackman
+
 import pygame
-import random
 import math
 
 
